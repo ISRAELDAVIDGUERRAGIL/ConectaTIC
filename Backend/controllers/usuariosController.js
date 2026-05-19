@@ -1,83 +1,213 @@
-import pool from "../config/db.js";
+// ============================================================
+// ARCHIVO: controllers/usuariosController.js
+// PROPÓSITO: Controlador de gestión de usuarios
+// DESCRIPCIÓN: Maneja las solicitudes HTTP relacionadas con usuarios
+//              y coordina con los servicios correspondientes
+// ============================================================
 
-// GET: todos los usuarios
-export const obtenerUsuarios = async (req, res) => {
+// Importar servicios de usuario
+import * as userService from '../services/userService.js';
+
+// Importar validadores
+import { validateUpdateUser } from '../validators/authValidator.js';
+
+// Importar formateador de respuestas
+import { ok, created, badRequest, notFound, internalError } from '../utils/responseFormatter.js';
+
+// ============================================================
+// CONTROLADOR: Obtener todos los usuarios
+// ============================================================
+
+/**
+ * Retorna la lista de todos los usuarios
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+export const obtenerUsuarios = async (req, res, next) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM usuarios");
-    res.json(rows);
+    const users = await userService.getAllUsers();
+    return ok(res, 'Usuarios obtenidos correctamente', users);
   } catch (error) {
-    console.error("Error al obtener usuarios:", error);
-    res.status(500).json({ message: "Error al obtener usuarios" });
+    next(error);
   }
 };
 
-// POST: crear usuario
-export const crearUsuario = async (req, res) => {
-  try {
-    const { nombre, correo, contrasena } = req.body;
+// ============================================================
+// CONTROLADOR: Obtener usuario por ID
+// ============================================================
 
-    if (!nombre || !correo || !contrasena) {
-      return res
-        .status(400)
-        .json({ message: "nombre, correo y contrasena son obligatorios" });
+/**
+ * Retorna un usuario específico por su ID
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+export const obtenerUsuarioPorId = async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    if (isNaN(userId)) {
+      return badRequest(res, 'ID de usuario inválido');
     }
 
-    const [result] = await pool.query(
-      "INSERT INTO usuarios (nombre, correo, contrasena) VALUES (?, ?, ?)",
-      [nombre, correo, contrasena]
-    );
+    const user = await userService.getUserById(userId);
 
-    res.status(201).json({
-      message: "Usuario creado con éxito",
-      id: result.insertId,
+    if (!user) {
+      return notFound(res, 'Usuario no encontrado');
+    }
+
+    return ok(res, 'Usuario obtenido correctamente', user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================================
+// CONTROLADOR: Crear usuario (alternativo a registro)
+// ============================================================
+
+/**
+ * Crea un nuevo usuario (endpoint alternativo)
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+export const crearUsuario = async (req, res, next) => {
+  try {
+    const { nombre, correo, password } = req.body;
+
+    if (!nombre || !correo || !password) {
+      return badRequest(res, 'Nombre, correo y contraseña son requeridos');
+    }
+
+    const user = await userService.createUser({ nombre, correo, password });
+
+    return created(res, 'Usuario creado correctamente', {
+      id: user.id,
+      nombre: user.nombre,
+      correo: user.correo
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================================
+// CONTROLADOR: Actualizar usuario
+// ============================================================
+
+/**
+ * Actualiza los datos de un usuario
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+export const actualizarUsuario = async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    if (isNaN(userId)) {
+      return badRequest(res, 'ID de usuario inválido');
+    }
+
+    // Validar datos de actualización
+    const validation = validateUpdateUser(req.body);
+
+    if (!validation.isValid) {
+      return badRequest(res, 'Datos inválidos', validation.errors);
+    }
+
+    // Actualizar usuario
+    const updatedUser = await userService.updateUser(userId, req.body);
+
+    if (!updatedUser) {
+      return notFound(res, 'Usuario no encontrado');
+    }
+
+    return ok(res, 'Usuario actualizado correctamente', updatedUser);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================================
+// CONTROLADOR: Actualizar progreso
+// ============================================================
+
+/**
+ * Incrementa el progreso de un usuario
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+export const actualizarProgreso = async (req, res, next) => {
+  try {
+    // ---- Obtener ID del usuario desde el token ----
+    // El middleware de autenticación agrega el usuario al request
+    const usuarioId = req.usuario?.id;
+
+    if (!usuarioId) {
+      return badRequest(res, 'ID de usuario no proporcionado');
+    }
+
+    // ---- Obtener incremento del body ----
+    const { incremento } = req.body;
+
+    if (incremento === undefined || incremento === null) {
+      return badRequest(res, 'El campo incremento es requerido');
+    }
+
+    // ---- Validar incremento ----
+    if (typeof incremento !== 'number' || incremento < 0) {
+      return badRequest(res, 'El incremento debe ser un número positivo');
+    }
+
+    // ---- Actualizar progreso ----
+    const nuevoProgreso = await userService.updateUserProgress(usuarioId, incremento);
+
+    return ok(res, 'Progreso actualizado correctamente', {
+      progreso: nuevoProgreso
     });
 
   } catch (error) {
-    console.error("Error al crear usuario:", error);
-
-    // Manejar correo duplicado
-    if (error.code === "ER_DUP_ENTRY") {
-      return res.status(400).json({ message: "El correo ya está registrado" });
-    }
-
-    res.status(500).json({ message: "Error al crear usuario" });
+    next(error);
   }
 };
 
+// ============================================================
+// CONTROLADOR: Eliminar usuario
+// ============================================================
 
-// PUT: actualizar progreso
-export const actualizarProgreso = async (req, res) => {
+/**
+ * Elimina un usuario de la base de datos
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+export const eliminarUsuario = async (req, res, next) => {
   try {
-    const { idUsuario, incremento } = req.body;
+    const userId = parseInt(req.params.id);
 
-    if (!idUsuario || incremento == null) {
-      return res
-        .status(400)
-        .json({ message: "idUsuario e incremento son obligatorios" });
+    if (isNaN(userId)) {
+      return badRequest(res, 'ID de usuario inválido');
     }
 
-    const [resultadoUpdate] = await pool.query(
-      "UPDATE usuarios SET progreso = LEAST(100, progreso + ?) WHERE id = ?",
-      [incremento, idUsuario]
-    );
+    const deleted = await userService.deleteUser(userId);
 
-    if (resultadoUpdate.affectedRows === 0) {
-      return res.status(404).json({ message: "Usuario no encontrado" });
+    if (!deleted) {
+      return notFound(res, 'Usuario no encontrado');
     }
 
-    const [rows] = await pool.query(
-      "SELECT progreso FROM usuarios WHERE id = ?",
-      [idUsuario]
-    );
-
-    res.json({
-      message: "Progreso actualizado",
-      progreso: rows[0].progreso,
-    });
-
+    return ok(res, 'Usuario eliminado correctamente');
   } catch (error) {
-    console.error("Error al actualizar progreso:", error);
-    res.status(500).json({ message: "Error al actualizar progreso" });
+    next(error);
   }
 };
 
+// ============================================================
+// EXPORTAR CONTROLADORES
+// ============================================================
+
+export default {
+  obtenerUsuarios,
+  obtenerUsuarioPorId,
+  crearUsuario,
+  actualizarUsuario,
+  actualizarProgreso,
+  eliminarUsuario
+};

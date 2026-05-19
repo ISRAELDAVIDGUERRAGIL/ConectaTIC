@@ -101,12 +101,16 @@ import { initDb } from './config/db.js';
 async function startServer() {
   await initDb();
   
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`
   ╔═══════════════════════════════════════════════════╗
   ║         Servidor ConectaTIC v2.0.0                ║
   ║                                                   ║
-  ║   Servidor corriendo en: http://localhost:${PORT} ║
+  ║   Servidor corriendo en: http://0.0.0.0:${PORT}       ║
+  ║   Disponible para:                                ║
+  ║   • localhost (PC)                                ║
+  ║   • 192.168.1.4 (Celular/Emulador)               ║
+  ║                                                   ║
   ║   Endpoints:                                      ║
   ║   • POST /api/auth/register                       ║
   ║   • POST /api/auth/login                          ║
