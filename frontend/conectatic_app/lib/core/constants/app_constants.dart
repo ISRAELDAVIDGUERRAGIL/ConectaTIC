@@ -4,12 +4,9 @@ import 'dart:io';
 class AppConstants {
   AppConstants._();
 
-  // URL base para el backend según plataforma.
+  // URL base para el backend (producción con Railway).
   static String get apiBaseUrl {
-    if (Platform.isAndroid) {
-      return 'http://192.168.1.4:3000/api';
-    }
-    return 'http://127.0.0.1:3000/api';
+    return 'https://conectatic-production.up.railway.app/api';
   }
 
   // Claves para SharedPreferences.
