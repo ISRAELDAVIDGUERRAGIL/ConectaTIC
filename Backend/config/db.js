@@ -1,52 +1,53 @@
-import initSqlJs from 'sql.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import pg from 'pg';
+import dotenv from 'dotenv';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, '..', 'conectatic.db');
+dotenv.config();
 
-let db;
+let pool;
 
 export async function initDb() {
-  const SQL = await initSqlJs();
-  
-  let data;
-  if (fs.existsSync(dbPath)) {
-    data = fs.readFileSync(dbPath);
-  }
-  
-  db = new SQL.Database(data);
-  
-  db.run(`
-    CREATE TABLE IF NOT EXISTS usuarios (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      correo TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      progreso INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  
-  saveDb();
-  
-  console.log('✅ Conexión a SQLite establecida correctamente');
-  console.log('   Base de datos:', dbPath);
-  
-  return db;
-}
+  try {
+    // Crear pool de conexiones PostgreSQL
+    pool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/conectatic',
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
 
-export function saveDb() {
-  if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(dbPath, buffer);
+    // Verificar conexión
+    const client = await pool.connect();
+    console.log('✅ Conexión a PostgreSQL establecida correctamente');
+    
+    const result = await client.query('SELECT NOW()');
+    console.log(`   Base de datos conectada: ${result.rows[0].now}`);
+
+    // Crear tabla si no existe
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        nombre VARCHAR(100) NOT NULL,
+        correo VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        progreso INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_correo ON usuarios(correo);
+    `);
+
+    console.log('✅ Tabla usuarios verificada/creada');
+    client.release();
+    
+    return pool;
+  } catch (error) {
+    console.error('❌ Error conectando a PostgreSQL:', error.message);
+    process.exit(1);
   }
 }
 
 export function getDb() {
-  return db;
+  return pool;
 }
 
-export default { initDb, getDb, saveDb };
+export default { initDb, getDb };

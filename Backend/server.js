@@ -56,6 +56,11 @@ const generalLimiter = rateLimit({
 // MIDDLEWARES DE SEGURIDAD
 // ============================================================
 
+// 🔒 Configurar proxy de confianza (para Railway)
+if (NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // 🔒 Helmet - Añade headers de seguridad
 app.use(helmet({
   contentSecurityPolicy: {
