@@ -20,13 +20,14 @@ class AppRouter {
   static GoRouter createRouter(AuthProvider authProvider) {
     return GoRouter(
       initialLocation: authProvider.isAuthenticated ? '/home' : '/auth',
+      listenable: authProvider, // ✅ ESCUCHAR CAMBIOS EN EL PROVIDER
       redirect: (context, state) {
         final isLoggedIn = authProvider.isAuthenticated;
         final isOnAuth = state.matchedLocation == '/auth' ||
-                         state.matchedLocation == '/login' ||
-                         state.matchedLocation == '/register' ||
-                         state.matchedLocation == '/onboarding' ||
-                         state.matchedLocation == '/splash';
+            state.matchedLocation == '/login' ||
+            state.matchedLocation == '/register' ||
+            state.matchedLocation == '/onboarding' ||
+            state.matchedLocation == '/splash';
 
         if (!isLoggedIn && !isOnAuth) {
           return '/auth';
@@ -72,10 +73,10 @@ class AppRouter {
             return ModuleDetailScreen(
               titulo: extra?['titulo']?.toString() ?? 'Módulo',
               descripcion: extra?['descripcion']?.toString() ?? '',
-              content: extra?['content'] != null 
+              content: extra?['content'] != null
                   ? List<Map<String, dynamic>>.from(extra!['content'])
                   : null,
-              exercises: extra?['exercises'] != null 
+              exercises: extra?['exercises'] != null
                   ? List<Map<String, dynamic>>.from(extra!['exercises'])
                   : null,
               videoPath: extra?['videoPath']?.toString(),
@@ -88,7 +89,7 @@ class AppRouter {
             final extra = state.extra as Map<String, dynamic>?;
             return LessonExerciseScreen(
               moduleTitle: extra?['titulo']?.toString() ?? 'Lección',
-              exercises: extra?['exercises'] != null 
+              exercises: extra?['exercises'] != null
                   ? List<Map<String, dynamic>>.from(extra!['exercises'])
                   : null,
             );
@@ -100,10 +101,10 @@ class AppRouter {
             final extra = state.extra as Map<String, dynamic>?;
             return LessonContentScreen(
               moduleTitle: extra?['titulo']?.toString() ?? 'Lección',
-              content: extra?['content'] != null 
+              content: extra?['content'] != null
                   ? List<Map<String, dynamic>>.from(extra!['content'])
                   : null,
-              exercises: extra?['exercises'] != null 
+              exercises: extra?['exercises'] != null
                   ? List<Map<String, dynamic>>.from(extra!['exercises'])
                   : null,
             );
@@ -116,10 +117,10 @@ class AppRouter {
             return VideoIntroScreen(
               moduleTitle: extra?['titulo']?.toString() ?? 'Módulo',
               videoPath: extra?['videoPath']?.toString() ?? '',
-              content: extra?['content'] != null 
+              content: extra?['content'] != null
                   ? List<Map<String, dynamic>>.from(extra!['content'])
                   : null,
-              exercises: extra?['exercises'] != null 
+              exercises: extra?['exercises'] != null
                   ? List<Map<String, dynamic>>.from(extra!['exercises'])
                   : null,
             );
