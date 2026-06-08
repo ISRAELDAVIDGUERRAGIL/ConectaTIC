@@ -18,12 +18,9 @@ const router = Router();
 // ============================================================
 
 // POST /api/auth/register - Registrar nuevo usuario
-router.post('/register', (req, res, next) => {
-  console.log('📍 ROUTE: Llegó a la ruta /register');
-  next();
-}, register);
+router.post('/register', register);
 
-// POST /api/auth/login - Iniciar sesión
+// POST /api/auth/login - Iniciar sesión (con rate limiting en server.js)
 router.post('/login', login);
 
 // ============================================================

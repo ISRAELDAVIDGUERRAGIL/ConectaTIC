@@ -9,7 +9,7 @@ class AppConstants {
     if (Platform.isAndroid) {
       return 'http://192.168.1.4:3000/api';
     }
-    return 'http://localhost:3000/api';
+    return 'http://127.0.0.1:3000/api';
   }
 
   // Claves para SharedPreferences.

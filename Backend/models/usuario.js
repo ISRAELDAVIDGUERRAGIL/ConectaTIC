@@ -51,25 +51,28 @@ export const UsuarioModel = {
 
   async updateById(id, updates) {
     const db = getDb();
+    
+    // 🔒 WHITELIST de campos permitidos (Prevención SQL Injection)
+    const allowedFields = ['nombre', 'correo'];
     const fields = [];
     const values = [];
 
-    if (updates.nombre !== undefined) {
-      fields.push('nombre = ?');
-      values.push(updates.nombre);
-    }
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key) && updates[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(updates[key]);
+      }
+    });
 
-    if (updates.correo !== undefined) {
-      fields.push('correo = ?');
-      values.push(updates.correo);
-    }
-
+    // Si no hay campos para actualizar, retornar usuario actual
     if (fields.length === 0) {
       return this.findById(id);
     }
 
+    // Agregar ID para el WHERE clause
     values.push(id);
 
+    // Ejecutar actualización con campos validados
     db.run(`UPDATE usuarios SET ${fields.join(', ')} WHERE id = ?`, values);
     saveDb();
 
@@ -95,3 +98,5 @@ export const UsuarioModel = {
     return true;
   }
 };
+
+export default UsuarioModel;

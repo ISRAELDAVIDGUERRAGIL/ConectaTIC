@@ -20,7 +20,9 @@
 export const successResponse = (res, statusCode = 200, message = 'Éxito', data = null) => {
   const response = {
     success: true,
-    message
+    message,
+    statusCode,
+    timestamp: new Date().toISOString()
   };
 
   // Solo agregar data si existe

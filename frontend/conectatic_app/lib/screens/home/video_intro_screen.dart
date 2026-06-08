@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 class VideoIntroScreen extends StatefulWidget {
   final String moduleTitle;
@@ -26,12 +27,30 @@ class _VideoIntroScreenState extends State<VideoIntroScreen> {
   bool _isInitialized = false;
   bool _hasError = false;
   bool _videoWatched = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    // Check if we're on a desktop platform where video_player may not work properly
+    final bool isDesktop = !kIsWeb && 
+        (defaultTargetPlatform == TargetPlatform.windows ||
+         defaultTargetPlatform == TargetPlatform.macOS ||
+         defaultTargetPlatform == TargetPlatform.linux);
+    
     if (widget.videoPath != null) {
-      _initializeVideo();
+      // On mobile/web, try to initialize video normally
+      // On desktop, we'll skip video initialization and go straight to content
+      // since video_player desktop support is limited
+      if (!isDesktop) {
+        _initializeVideo();
+      } else {
+        // On desktop, we can't reliably use video_player, so we'll treat it as if
+        // there's no video and go straight to showing the content button
+        // For now, we'll show an error state so users know video isn't supported
+        setState(() => _hasError = true);
+        setState(() => _errorMessage = 'Video playback not supported on desktop');
+      }
     } else {
       setState(() => _hasError = true);
     }
@@ -46,7 +65,10 @@ class _VideoIntroScreenState extends State<VideoIntroScreen> {
       setState(() => _isInitialized = true);
     } catch (e) {
       debugPrint('Error loading video: $e');
-      setState(() => _hasError = true);
+      setState(() {
+        _hasError = true;
+        _errorMessage = e.toString();
+      });
     }
   }
 
@@ -107,7 +129,7 @@ class _VideoIntroScreenState extends State<VideoIntroScreen> {
                     borderRadius: BorderRadius.circular(16),
                     child: AspectRatio(
                       aspectRatio: 16 / 9,
-                      child: _controller!.value.isInitialized
+                      child: _controller != null && _controller!.value.isInitialized
                           ? VideoPlayer(_controller!)
                           : const CircularProgressIndicator(color: Color(0xFF58CC02)),
                     ),
@@ -215,6 +237,17 @@ class _VideoIntroScreenState extends State<VideoIntroScreen> {
                 fontSize: isWide ? 20 : 16,
               ),
             ),
+            if (_errorMessage != null) ...[
+              SizedBox(height: isWide ? 12 : 8),
+              Text(
+                'Error: $_errorMessage',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: isWide ? 14 : 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             SizedBox(height: isWide ? 40 : 28),
             SizedBox(
               width: double.infinity,

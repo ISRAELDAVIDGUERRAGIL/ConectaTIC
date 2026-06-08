@@ -8,16 +8,12 @@
 // IMPORTS
 // ============================================================
 
-// Importar Express
 import express from 'express';
-
-// Importar CORS (permite solicitudes desde otros dominios)
 import cors from 'cors';
-
-// Importar dotenv para variables de entorno
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-
-// Importar rutas
+import { initDb } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import usuariosRoutes from './routes/usuariosRoutes.js';
 import errorHandler from './middlewares/errorHandler.js';
@@ -26,101 +22,202 @@ import errorHandler from './middlewares/errorHandler.js';
 dotenv.config();
 
 // ============================================================
-// CONFIGURACIÓN DE EXPRESS
+// CONFIGURACIÓN
 // ============================================================
 
-// Crear aplicación Express
 const app = express();
-
-// Puerto del servidor (usar variable de entorno o 3000 por defecto)
 const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // ============================================================
-// MIDDLEWARES
+// RATE LIMITERS
 // ============================================================
 
-// CORS - Permitir solicitudes desde otros dominios
-app.use(cors({
-  origin: '*', // En producción, especificar los orígenes permitidos
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+// Rate limiter para endpoints de auth (estricto)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Máximo 5 intentos
+  message: 'Demasiados intentos de autenticación. Intenta en 15 minutos',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => NODE_ENV === 'development', // No limitar en desarrollo
+});
+
+// Rate limiter general (más permisivo)
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 100, // Máximo 100 requests
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => NODE_ENV === 'development',
+});
+
+// ============================================================
+// MIDDLEWARES DE SEGURIDAD
+// ============================================================
+
+// 🔒 Helmet - Añade headers de seguridad
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+    },
+  },
 }));
 
-// Body Parser - Parsear JSON en las solicitudes
-app.use(express.json());
+// 🔒 CORS - Restringir orígenes permitidos
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://192.168.1.4:3000').split(',');
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir si no hay origin o está en la lista blanca
+    if (!origin || allowedOrigins.includes(origin.trim())) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS no permitido para origen: ${origin}`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 3600,
+  optionsSuccessStatus: 200
+}));
 
-// Body Parser - Parsear datos URL-encoded (formularios)
-app.use(express.urlencoded({ extended: true }));
+// 🔒 HTTPS Redirect en producción
+if (NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (!req.secure && req.get('x-forwarded-proto') !== 'https') {
+      return res.redirect('https://' + req.get('host') + req.url);
+    }
+    next();
+  });
+}
+
+// ============================================================
+// BODY PARSER CON LÍMITES
+// ============================================================
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// ============================================================
+// REQUEST LOGGING
+// ============================================================
+
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    const log = {
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.path,
+      query: Object.keys(req.query).length ? req.query : undefined,
+      statusCode: res.statusCode,
+      durationMs: duration,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+    };
+    
+    // Solo log en producción o para errores
+    if (NODE_ENV === 'production' || res.statusCode >= 400) {
+      console.log(JSON.stringify(log));
+    }
+  });
+  
+  next();
+});
 
 // ============================================================
 // RUTAS
 // ============================================================
 
-// Ruta base - Verificar que el servidor funciona
-app.get('/', (req, res) => {
+// 🏥 Health check
+app.get('/api', (req, res) => {
   res.json({
     success: true,
     message: 'API ConectaTIC funcionando correctamente',
     version: '2.0.0',
-    documentation: '/api/docs'
+    timestamp: new Date().toISOString(),
+    environment: NODE_ENV,
   });
 });
 
-// Rutas de autenticación
-app.use('/api/auth', authRoutes);
+// 🔐 Autenticación (con rate limit)
+app.use('/api/auth', authLimiter, authRoutes);
 
-// Rutas de usuarios
-app.use('/api/usuarios', usuariosRoutes);
+// 👥 Usuarios
+app.use('/api/usuarios', generalLimiter, usuariosRoutes);
 
 // ============================================================
-// MANEJO DE ERRORES 404
+// MANEJO DE RUTAS NO ENCONTRADAS
 // ============================================================
 
-// Esta función se ejecuta cuando ninguna ruta coincide
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Ruta no encontrada',
-    path: req.originalUrl
+    message: `Ruta no encontrada: ${req.method} ${req.path}`,
+    statusCode: 404,
   });
 });
 
 // ============================================================
-// MANEJO DE ERRORES GENERALES
+// MANEJO DE ERRORES GLOBAL
 // ============================================================
 
-// Middleware de manejo de errores global (debe ser el último)
 app.use(errorHandler);
 
 // ============================================================
 // INICIAR SERVIDOR
 // ============================================================
 
-import { initDb } from './config/db.js';
-
 async function startServer() {
-  await initDb();
-  
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`
-  ╔═══════════════════════════════════════════════════╗
-  ║         Servidor ConectaTIC v2.0.0                ║
-  ║                                                   ║
-  ║   Servidor corriendo en: http://0.0.0.0:${PORT}       ║
-  ║   Disponible para:                                ║
-  ║   • localhost (PC)                                ║
-  ║   • 192.168.1.4 (Celular/Emulador)               ║
-  ║                                                   ║
-  ║   Endpoints:                                      ║
-  ║   • POST /api/auth/register                       ║
-  ║   • POST /api/auth/login                          ║
-  ║   • GET  /api/usuarios                            ║
-  ║   • PUT  /api/usuarios/progreso                   ║
-  ╚═══════════════════════════════════════════════════╝
-    `);
-  });
+  try {
+    // Inicializar base de datos
+    console.log('📊 Inicializando base de datos...');
+    await initDb();
+    
+    // Iniciar servidor
+    const server = app.listen(PORT, () => {
+      console.log(`
+╔═══════════════════════════════════════════════════╗
+║         Servidor ConectaTIC v2.0.0                ║
+║                                                   ║
+║   Servidor corriendo en: http://0.0.0.0:${PORT}       ║
+║   Entorno: ${NODE_ENV}                           ║
+║                                                   ║
+║   Endpoints:                                      ║
+║   • POST   /api/auth/register                     ║
+║   • POST   /api/auth/login                        ║
+║   • GET    /api/usuarios                          ║
+║   • PUT    /api/usuarios/progreso                 ║
+║                                                   ║
+║   Rate Limiting ACTIVO                            ║
+║   Seguridad ACTIVA                                ║
+║                                                   ║
+╚═══════════════════════════════════════════════════╝
+      `);
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('📍 Recibida señal SIGTERM. Cerrando servidor...');
+      server.close(() => {
+        console.log('✅ Servidor cerrado gracefully');
+        process.exit(0);
+      });
+    });
+
+  } catch (error) {
+    console.error('❌ Error al iniciar servidor:', error.message);
+    process.exit(1);
+  }
 }
 
+// Iniciar servidor
 startServer();
 
 export default app;

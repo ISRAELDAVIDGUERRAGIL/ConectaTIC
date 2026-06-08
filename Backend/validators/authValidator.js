@@ -11,10 +11,11 @@
 // Email: verifica formato básico de email
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Password: mínimo 6 caracteres
-const PASSWORD_REGEX = /^.{6,}$/;
+// Password: mínimo 8 caracteres, con mayúscula, minúscula y número
+// Más segura que antes (era solo 6 caracteres)
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
-// Nombre: solo letras y espacios, entre 2 y 100 caracteres
+// Nombre: solo letras, espacios y acentos, entre 2 y 100 caracteres
 const NAME_REGEX = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,100}$/;
 
 // ============================================================
@@ -48,7 +49,7 @@ export const validateRegister = (data) => {
   if (!password || password === '') {
     errors.push('La contraseña es requerida');
   } else if (!PASSWORD_REGEX.test(password)) {
-    errors.push('La contraseña debe tener al menos 6 caracteres, incluyendo letras y números');
+    errors.push('La contraseña debe tener al menos 8 caracteres, con mayúscula, minúscula, número y carácter especial (@$!%*?&)');
   }
 
   // ---- Retornar resultado ----
@@ -101,7 +102,7 @@ export const validateLogin = (data) => {
  */
 export const validateUpdateUser = (data) => {
   const errors = [];
-  const { nombre, progreso } = data;
+  const { nombre, correo, progreso } = data;
 
   // ---- Validar nombre (opcional) ----
   if (nombre !== undefined) {
@@ -109,6 +110,15 @@ export const validateUpdateUser = (data) => {
       errors.push('El nombre no puede estar vacío');
     } else if (!NAME_REGEX.test(nombre.trim())) {
       errors.push('El nombre debe tener entre 2 y 100 caracteres y solo contener letras');
+    }
+  }
+
+  // ---- Validar correo (opcional) ----
+  if (correo !== undefined) {
+    if (correo.trim() === '') {
+      errors.push('El correo no puede estar vacío');
+    } else if (!EMAIL_REGEX.test(correo.trim())) {
+      errors.push('El correo debe tener un formato válido');
     }
   }
 
