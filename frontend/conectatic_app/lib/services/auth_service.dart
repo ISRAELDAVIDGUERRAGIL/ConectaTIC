@@ -55,20 +55,32 @@ class AuthService {
   }
 
   static Map<String, dynamic> _parseResponse(http.Response response) {
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    try {
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Para login, el backend retorna {success: true, data: {token, user}}
+        // Para registro, retorna {success: true, data: {id, nombre, correo}}
+        final data = decoded['data'] as Map<String, dynamic>?;
+
+        return {
+          'success': true,
+          'data': data ?? decoded,
+          'message': decoded['message'] ?? 'Operación exitosa',
+        };
+      }
+
       return {
-        'success': true,
-        'data': decoded['data'] ?? decoded,
-        'message': decoded['message'] ?? 'Operación exitosa',
+        'success': false,
+        'message': decoded['message'] ?? 'Error en el servidor',
+        'errors': decoded['errors'],
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error al procesar respuesta del servidor',
+        'error': e.toString(),
       };
     }
-
-    return {
-      'success': false,
-      'message': decoded['message'] ?? 'Error en el servidor',
-      'errors': decoded['errors'],
-    };
   }
 }

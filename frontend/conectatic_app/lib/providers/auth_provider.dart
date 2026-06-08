@@ -38,13 +38,44 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     final result = await AuthService.login(correo: correo, password: password);
 
+    if (kDebugMode) {
+      print('📱 Login result: $result');
+    }
+
     if (result['success'] == true) {
       final data = result['data'] as Map<String, dynamic>;
-      _token = data['token'] as String;
-      _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+
+      if (kDebugMode) {
+        print('✅ Data recibida: $data');
+      }
+
+      // Obtener token y usuario
+      _token = data['token'] as String?;
+
+      if (data['user'] != null) {
+        _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      } else {
+        // Si no hay 'user', construir desde data directa
+        _user = UserModel(
+          id: data['id'] as int? ?? 0,
+          nombre: data['nombre'] as String? ?? 'Usuario',
+          correo: data['correo'] as String? ?? '',
+          progreso: data['progreso'] as int? ?? 0,
+        );
+      }
+
+      if (kDebugMode) {
+        print('✅ Token: $_token');
+        print('✅ User: $_user');
+      }
+
       await _saveSession();
       _setLoading(false);
       return result;
+    }
+
+    if (kDebugMode) {
+      print('❌ Login error: ${result['message']}');
     }
 
     _setLoading(false);
@@ -79,7 +110,8 @@ class AuthProvider extends ChangeNotifier {
     if (result['success'] == true) {
       // Actualizar el progreso local
       if (_user != null) {
-        final nuevoProgreso = result['data']['progreso'] as int? ?? _user!.progreso;
+        final nuevoProgreso =
+            result['data']['progreso'] as int? ?? _user!.progreso;
         _user = UserModel(
           id: _user!.id,
           nombre: _user!.nombre,
