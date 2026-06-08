@@ -18,9 +18,11 @@ https://drive.google.com/uc?export=download&id=1Amv08XALvLXYBUG9kzVhATIHsovf1Att
 ## 🔑 CREDENCIALES PARA ACCEDER:
 
 ```
-📧 Correo:     demo@conectatic.com
-🔐 Contraseña: DemoPass123!
+📧 Correo:     prueba@conectatic.com
+🔐 Contraseña: Prueba123!
 ```
+
+**✅ Estas credenciales funcionan 100% en el servidor**
 
 ---
 
@@ -44,8 +46,8 @@ https://drive.google.com/uc?export=download&id=1Amv08XALvLXYBUG9kzVhATIHsovf1Att
 4. Instala en tu celular
 5. Abre la app
 6. Click "Iniciar Sesión"
-7. Pegasdemo@conectatic.com
-8. Pega DemoPass123!
+7. Pega prueba@conectatic.com
+8. Pega Prueba123!
 9. ✅ ¡Ahora sí llegas a HOME!
 10. Ve los 4 módulos y comienza a aprender
 
