@@ -20,7 +20,7 @@ class AppRouter {
   static GoRouter createRouter(AuthProvider authProvider) {
     return GoRouter(
       initialLocation: authProvider.isAuthenticated ? '/home' : '/auth',
-      listenable: authProvider, // ✅ ESCUCHAR CAMBIOS EN EL PROVIDER
+      refreshListenable: authProvider, // ✅ ESCUCHAR CAMBIOS EN EL PROVIDER
       redirect: (context, state) {
         final isLoggedIn = authProvider.isAuthenticated;
         final isOnAuth = state.matchedLocation == '/auth' ||
