@@ -1,4 +1,6 @@
-import pg from 'pg';
+import sqlite3 from 'sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 // Cargar .env solo en desarrollo
@@ -6,56 +8,60 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
-let pool;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// En producción, usar volumen persistente; en desarrollo, usar archivo local
+const dbPath = process.env.NODE_ENV === 'production' 
+  ? '/data/conectatic.db'
+  : path.join(__dirname, '../conectatic.db');
+
+let db;
 
 export async function initDb() {
-  try {
-    // Usar DATABASE_URL directamente de process.env (Railway lo proporciona)
-    const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/conectatic';
-    
-    console.log('🔍 Conectando a:', dbUrl.split('@')[0] + '@' + dbUrl.split('@')[1]?.substring(0, 30) + '...');
+  return new Promise((resolve, reject) => {
+    db = new sqlite3.Database(dbPath, (err) => {
+      if (err) {
+        console.error('❌ Error abriendo SQLite:', err.message);
+        reject(err);
+      } else {
+        console.log('✅ Conexión a SQLite establecida correctamente');
+        console.log(`   Base de datos: ${dbPath}`);
 
-    // Crear pool de conexiones PostgreSQL
-    pool = new pg.Pool({
-      connectionString: dbUrl,
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+        // Habilitar foreign keys
+        db.run('PRAGMA foreign_keys = ON', (err) => {
+          if (err) {
+            console.error('❌ Error habilitando foreign keys:', err);
+            reject(err);
+          } else {
+            // Crear tabla si no existe
+            db.run(`
+              CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre VARCHAR(100) NOT NULL,
+                correo VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                progreso INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+              )
+            `, (err) => {
+              if (err) {
+                console.error('❌ Error creando tabla:', err);
+                reject(err);
+              } else {
+                console.log('✅ Tabla usuarios verificada/creada');
+                resolve(db);
+              }
+            });
+          }
+        });
+      }
     });
-
-    // Verificar conexión
-    const client = await pool.connect();
-    console.log('✅ Conexión a PostgreSQL establecida correctamente');
-    
-    const result = await client.query('SELECT NOW()');
-    console.log(`   Base de datos conectada: ${result.rows[0].now}`);
-
-    // Crear tabla si no existe
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS usuarios (
-        id SERIAL PRIMARY KEY,
-        nombre VARCHAR(100) NOT NULL,
-        correo VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        progreso INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_correo ON usuarios(correo);
-    `);
-
-    console.log('✅ Tabla usuarios verificada/creada');
-    client.release();
-    
-    return pool;
-  } catch (error) {
-    console.error('❌ Error conectando a PostgreSQL:', error.message);
-    process.exit(1);
-  }
+  });
 }
 
 export function getDb() {
-  return pool;
+  return db;
 }
 
 export default { initDb, getDb };
