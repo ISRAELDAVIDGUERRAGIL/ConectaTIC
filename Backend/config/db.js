@@ -1,15 +1,23 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Cargar .env solo en desarrollo
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 let pool;
 
 export async function initDb() {
   try {
+    // Usar DATABASE_URL directamente de process.env (Railway lo proporciona)
+    const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/conectatic';
+    
+    console.log('🔍 Conectando a:', dbUrl.split('@')[0] + '@' + dbUrl.split('@')[1]?.substring(0, 30) + '...');
+
     // Crear pool de conexiones PostgreSQL
     pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/conectatic',
+      connectionString: dbUrl,
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,

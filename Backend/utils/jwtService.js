@@ -5,17 +5,19 @@
 // ============================================================
 
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import ApiError from './ApiError.js';
 
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+// Leer directamente de process.env (sin dotenv en producción)
+const JWT_SECRET = process.env.JWT_SECRET || process.env.jwt_secret;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || process.env.jwt_expires_in || '7d';
 
 if (!JWT_SECRET) {
+  console.error('❌ ERROR: JWT_SECRET no está definida');
+  console.error('Variables disponibles:', Object.keys(process.env).filter(k => k.toLowerCase().includes('jwt')));
   throw new Error('La variable de entorno JWT_SECRET no está definida');
 }
+
+console.log('✅ JWT_SECRET cargada correctamente');
 
 /**
  * Genera un token JWT con el payload del usuario
