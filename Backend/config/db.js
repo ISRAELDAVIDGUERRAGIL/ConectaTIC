@@ -1,6 +1,4 @@
-import sqlite3 from 'sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
 // Cargar .env solo en desarrollo
@@ -8,62 +6,53 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Usar /tmp para persistencia temporal en Railway (24-48h)
-// En desarrollo, usar archivo local
-const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/tmp/conectatic.db'
-  : path.join(__dirname, '../conectatic.db');
-
-let db;
+let pool;
 
 export async function initDb() {
-  return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('❌ Error abriendo SQLite:', err.message);
-        reject(err);
-      } else {
-        console.log('✅ Conexión a SQLite establecida correctamente');
-        console.log(`   Base de datos: ${dbPath}`);
-        console.log(`   📝 Nota: Datos persisten ~24-48 horas en Railway`);
-
-        // Habilitar foreign keys
-        db.run('PRAGMA foreign_keys = ON', (err) => {
-          if (err) {
-            console.error('❌ Error habilitando foreign keys:', err);
-            reject(err);
-          } else {
-            // Crear tabla si no existe
-            db.run(`
-              CREATE TABLE IF NOT EXISTS usuarios (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre VARCHAR(100) NOT NULL,
-                correo VARCHAR(255) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                progreso INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-              )
-            `, (err) => {
-              if (err) {
-                console.error('❌ Error creando tabla:', err);
-                reject(err);
-              } else {
-                console.log('✅ Tabla usuarios verificada/creada');
-                resolve(db);
-              }
-            });
-          }
-        });
-      }
+  try {
+    // Crear pool de conexiones MySQL
+    pool = mysql.createPool({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'conectatic',
+      port: process.env.DB_PORT || 3306,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0
     });
-  });
+
+    // Probar conexión
+    const connection = await pool.getConnection();
+    console.log('✅ Conexión a MySQL establecida correctamente');
+    console.log(`   Host: ${process.env.DB_HOST || 'localhost'}`);
+    console.log(`   Base de datos: ${process.env.DB_NAME || 'conectatic'}`);
+    console.log('   📝 Nota: Base de datos persistente en PlanetScale');
+
+    // Crear tabla si no existe
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(100) NOT NULL,
+        correo VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        progreso INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    console.log('✅ Tabla usuarios verificada/creada');
+    connection.release();
+    
+    return pool;
+  } catch (error) {
+    console.error('❌ Error conectando a MySQL:', error.message);
+    throw error;
+  }
 }
 
 export function getDb() {
-  return db;
+  return pool;
 }
 
 export default { initDb, getDb };
