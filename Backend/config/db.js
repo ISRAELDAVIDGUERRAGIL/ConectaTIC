@@ -1,6 +1,4 @@
-import sqlite3 from 'sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { sql } from '@vercel/postgres';
 import dotenv from 'dotenv';
 
 // Cargar .env solo en desarrollo
@@ -8,62 +6,36 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Usar /tmp para persistencia temporal en Railway (24-48h)
-// En desarrollo, usar archivo local
-const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/tmp/conectatic.db'
-  : path.join(__dirname, '../conectatic.db');
-
-let db;
-
 export async function initDb() {
-  return new Promise((resolve, reject) => {
-    db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('❌ Error abriendo SQLite:', err.message);
-        reject(err);
-      } else {
-        console.log('✅ Conexión a SQLite establecida correctamente');
-        console.log(`   Base de datos: ${dbPath}`);
-        console.log(`   📝 Nota: Datos persisten ~24-48 horas en Railway`);
+  try {
+    // Verificar conexión a Vercel Postgres
+    const result = await sql`SELECT 1`;
+    console.log('✅ Conexión a Vercel Postgres establecida correctamente');
+    console.log('   📝 Nota: Base de datos persistente y GRATIS con Vercel');
 
-        // Habilitar foreign keys
-        db.run('PRAGMA foreign_keys = ON', (err) => {
-          if (err) {
-            console.error('❌ Error habilitando foreign keys:', err);
-            reject(err);
-          } else {
-            // Crear tabla si no existe
-            db.run(`
-              CREATE TABLE IF NOT EXISTS usuarios (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre VARCHAR(100) NOT NULL,
-                correo VARCHAR(255) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                progreso INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-              )
-            `, (err) => {
-              if (err) {
-                console.error('❌ Error creando tabla:', err);
-                reject(err);
-              } else {
-                console.log('✅ Tabla usuarios verificada/creada');
-                resolve(db);
-              }
-            });
-          }
-        });
-      }
-    });
-  });
+    // Crear tabla si no existe
+    await sql`
+      CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
+        nombre VARCHAR(100) NOT NULL,
+        correo VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        progreso INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    console.log('✅ Tabla usuarios verificada/creada');
+    
+    return sql;
+  } catch (error) {
+    console.error('❌ Error conectando a Vercel Postgres:', error.message);
+    throw error;
+  }
 }
 
 export function getDb() {
-  return db;
+  return sql;
 }
 
 export default { initDb, getDb };

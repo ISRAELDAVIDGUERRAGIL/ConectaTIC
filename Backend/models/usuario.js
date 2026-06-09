@@ -5,83 +5,66 @@ export const UsuarioModel = {
   // Buscar usuario por correo
   // ============================================================
   async findByEmail(correo) {
-    return new Promise((resolve, reject) => {
+    try {
       const db = getDb();
-      db.get(
-        'SELECT id, nombre, correo, password, progreso FROM usuarios WHERE correo = ?',
-        [correo],
-        (err, row) => {
-          if (err) {
-            console.error('❌ Error en findByEmail:', err.message);
-            reject(err);
-          } else {
-            resolve(row || null);
-          }
-        }
-      );
-    });
+      const result = await db`
+        SELECT id, nombre, correo, password, progreso FROM usuarios WHERE correo = ${correo}
+      `;
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('❌ Error en findByEmail:', error.message);
+      throw error;
+    }
   },
 
   // ============================================================
   // Buscar usuario por ID
   // ============================================================
   async findById(id) {
-    return new Promise((resolve, reject) => {
+    try {
       const db = getDb();
-      db.get(
-        'SELECT id, nombre, correo, progreso FROM usuarios WHERE id = ?',
-        [id],
-        (err, row) => {
-          if (err) {
-            console.error('❌ Error en findById:', err.message);
-            reject(err);
-          } else {
-            resolve(row || null);
-          }
-        }
-      );
-    });
+      const result = await db`
+        SELECT id, nombre, correo, progreso FROM usuarios WHERE id = ${id}
+      `;
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('❌ Error en findById:', error.message);
+      throw error;
+    }
   },
 
   // ============================================================
   // Obtener todos los usuarios
   // ============================================================
   async getAll() {
-    return new Promise((resolve, reject) => {
+    try {
       const db = getDb();
-      db.all(
-        'SELECT id, nombre, correo, progreso FROM usuarios ORDER BY id DESC',
-        (err, rows) => {
-          if (err) {
-            console.error('❌ Error en getAll:', err.message);
-            reject(err);
-          } else {
-            resolve(rows || []);
-          }
-        }
-      );
-    });
+      const result = await db`
+        SELECT id, nombre, correo, progreso FROM usuarios ORDER BY id DESC
+      `;
+      return result.rows || [];
+    } catch (error) {
+      console.error('❌ Error en getAll:', error.message);
+      throw error;
+    }
   },
 
   // ============================================================
   // Crear nuevo usuario
   // ============================================================
   async create({ nombre, correo, password }) {
-    return new Promise((resolve, reject) => {
+    try {
       const db = getDb();
-      db.run(
-        'INSERT INTO usuarios (nombre, correo, password, progreso) VALUES (?, ?, ?, ?)',
-        [nombre, correo, password, 0],
-        function(err) {
-          if (err) {
-            console.error('❌ Error en create:', err.message);
-            reject(err);
-          } else {
-            resolve(this.lastID);
-          }
-        }
-      );
-    });
+      const result = await db`
+        INSERT INTO usuarios (nombre, correo, password, progreso)
+        VALUES (${nombre}, ${correo}, ${password}, 0)
+        RETURNING id
+      `;
+      return result.rows[0].id;
+    } catch (error) {
+      console.error('❌ Error en create:', error.message);
+      throw error;
+    }
   },
 
   // ============================================================
@@ -91,37 +74,29 @@ export const UsuarioModel = {
     try {
       // 🔒 WHITELIST de campos permitidos
       const allowedFields = ['nombre', 'correo'];
-      const fields = [];
-      const values = [];
+      const updateFields = {};
 
       Object.keys(updates).forEach(key => {
         if (allowedFields.includes(key) && updates[key] !== undefined) {
-          fields.push(`${key} = ?`);
-          values.push(updates[key]);
+          updateFields[key] = updates[key];
         }
       });
 
-      if (fields.length === 0) {
+      if (Object.keys(updateFields).length === 0) {
         return this.findById(id);
       }
 
-      values.push(id);
+      const db = getDb();
+      const setClause = Object.keys(updateFields)
+        .map(key => `${key} = $${Object.keys(updateFields).indexOf(key) + 1}`)
+        .join(', ');
+      const values = Object.values(updateFields);
 
-      return new Promise((resolve, reject) => {
-        const db = getDb();
-        db.run(
-          `UPDATE usuarios SET ${fields.join(', ')} WHERE id = ?`,
-          values,
-          (err) => {
-            if (err) {
-              console.error('❌ Error en updateById:', err.message);
-              reject(err);
-            } else {
-              this.findById(id).then(resolve).catch(reject);
-            }
-          }
-        );
-      });
+      await db(`
+        UPDATE usuarios SET ${setClause} WHERE id = $${values.length + 1}
+      `, [...values, id]);
+
+      return this.findById(id);
     } catch (error) {
       console.error('❌ Error en updateById:', error.message);
       throw error;
@@ -138,21 +113,12 @@ export const UsuarioModel = {
 
       const nuevoProgreso = Math.min(100, Math.max(0, user.progreso + incremento));
 
-      return new Promise((resolve, reject) => {
-        const db = getDb();
-        db.run(
-          'UPDATE usuarios SET progreso = ? WHERE id = ?',
-          [nuevoProgreso, id],
-          (err) => {
-            if (err) {
-              console.error('❌ Error en updateProgress:', err.message);
-              reject(err);
-            } else {
-              resolve(nuevoProgreso);
-            }
-          }
-        );
-      });
+      const db = getDb();
+      await db`
+        UPDATE usuarios SET progreso = ${nuevoProgreso} WHERE id = ${id}
+      `;
+
+      return nuevoProgreso;
     } catch (error) {
       console.error('❌ Error en updateProgress:', error.message);
       throw error;
@@ -163,21 +129,16 @@ export const UsuarioModel = {
   // Eliminar usuario por ID
   // ============================================================
   async deleteById(id) {
-    return new Promise((resolve, reject) => {
+    try {
       const db = getDb();
-      db.run(
-        'DELETE FROM usuarios WHERE id = ?',
-        [id],
-        function(err) {
-          if (err) {
-            console.error('❌ Error en deleteById:', err.message);
-            reject(err);
-          } else {
-            resolve(this.changes > 0);
-          }
-        }
-      );
-    });
+      const result = await db`
+        DELETE FROM usuarios WHERE id = ${id}
+      `;
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error('❌ Error en deleteById:', error.message);
+      throw error;
+    }
   }
 };
 

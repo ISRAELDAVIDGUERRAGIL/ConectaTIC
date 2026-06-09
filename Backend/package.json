@@ -24,7 +24,7 @@
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
-    "sqlite3": "^5.1.6"
+    "@vercel/postgres": "^0.4.2"
   },
   "devDependencies": {
     "chai": "^6.2.2",

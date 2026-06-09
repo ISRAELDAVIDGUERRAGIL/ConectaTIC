@@ -1,4 +1,23 @@
 {
+  "name": "conectatic",
+  "version": "2.0.0",
+  "description": "ConectaTIC - Aplicación educativa para adultos mayores",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "dev": "cd Backend && npm run dev",
+    "start": "cd Backend && npm start",
+    "test": "cd Backend && npm test",
+    "check-users": "node check-users.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "pg": "^8.11.0",
+    "qrcode": "^1.5.4",
+    "dotenv": "^17.2.3"
+  },
   "devDependencies": {
     "qrcode": "^1.5.4"
   }

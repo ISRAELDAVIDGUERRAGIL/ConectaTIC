@@ -30,9 +30,9 @@ export const registerUser = async (userData) => {
 
     const existingUser = await UsuarioModel.findByEmail(correo);
 
-  if (existingUser) {
-    throw ApiError.conflict('El correo electrónico ya está registrado');
-  }
+    if (existingUser) {
+      throw ApiError.conflict('El correo electrónico ya está registrado');
+    }
 
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
@@ -43,10 +43,10 @@ export const registerUser = async (userData) => {
   });
 
   return {
-      id: insertId,
-      nombre,
-      correo
-    };
+    id: insertId,
+    nombre,
+    correo
+  };
   } catch (error) {
     console.error('❌ ERROR en registerUser:', error.message);
     throw error;
@@ -77,21 +77,21 @@ export const loginUser = async (credentials) => {
     throw ApiError.unauthorized('Credenciales inválidas');
   }
 
-const token = jwtService.signToken({
+  const token = jwtService.signToken({
+    id: user.id,
+    nombre: user.nombre,
+    correo: user.correo
+  });
+
+  return {
+    token,
+    user: {
       id: user.id,
       nombre: user.nombre,
-      correo: user.correo
-    });
-
-return {
-      token,
-      user: {
-        id: user.id,
-        nombre: user.nombre,
-        correo: user.correo,
-        progreso: user.progreso
-      }
-    };
+      correo: user.correo,
+      progreso: user.progreso
+    }
+  };
 };
 
 export const verifyToken = jwtService.verifyToken;
