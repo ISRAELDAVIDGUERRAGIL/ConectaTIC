@@ -22,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _correoController = TextEditingController();
   final _contrasenaController = TextEditingController();
   String? _errorMessage;
-  String _debugStatus = 'Listo';
 
   @override
   void dispose() {
@@ -36,25 +35,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _debugStatus = '1. Iniciando...');
-    
     final authProvider = context.read<AuthProvider>();
-    
-    try {
-      setState(() => _debugStatus = '2. Llamando al servidor...');
-      
-      final result = await authProvider.login(
-        correo: _correoController.text.trim(),
-        password: _contrasenaController.text,
-      ).timeout(const Duration(seconds: 15));
 
-      setState(() => _debugStatus = '3. Respuesta recibida: $result');
+    try {
+      final result = await authProvider
+          .login(
+            correo: _correoController.text.trim(),
+            password: _contrasenaController.text,
+          )
+          .timeout(const Duration(seconds: 15));
 
       // Si hay error, mostrar pantalla completa de error
       if (result['success'] != true) {
         if (mounted) {
           Navigator.push(
-            context, 
+            context,
             MaterialPageRoute(
               builder: (ctx) => Scaffold(
                 appBar: AppBar(title: const Text('ERROR')),
@@ -74,7 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 10),
                         Text(
                           'Detalles: $result',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -106,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Si falló, mostrar error
       _errorMessage = result['message'] as String? ?? 'Error desconocido';
       print('Login falló: $_errorMessage');
-      
+
       // También mostrar en la UI como texto
       setState(() {
         _errorMessage = 'Error: $_errorMessage';
@@ -115,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       Navigator.push(
-        context, 
+        context,
         MaterialPageRoute(
           builder: (ctx) => Scaffold(
             appBar: AppBar(title: const Text('ERROR DE CONEXIÓN')),
@@ -171,38 +167,25 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // DEBUG STATUS
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              color: Colors.blue,
-              child: Text(
-                'DEBUG: $_debugStatus',
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 20),
-            
             // Título principal
             Text(
               '¡Bienvenido de vuelta! 👋',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF3C3C3C),
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF3C3C3C),
+                  ),
             ),
             const SizedBox(height: 8),
-            
+
             // Subtítulo
             Text(
               'Ingresa tu correo y contraseña para continuar',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: const Color(0xFF3C3C3C).withOpacity(0.6),
-              ),
+                    color: const Color(0xFF3C3C3C).withOpacity(0.6),
+                  ),
             ),
             const SizedBox(height: 32),
-            
+
             // Formulario de login
             Form(
               key: _formKey,
@@ -228,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Campo de contraseña
                   TextFormField(
                     controller: _contrasenaController,
@@ -246,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 28),
-                  
+
                   // Mensaje de error
                   if (_errorMessage != null)
                     Container(
@@ -258,7 +241,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: Color(0xFFFF4B4B)),
+                          const Icon(Icons.error_outline,
+                              color: Color(0xFFFF4B4B)),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -269,9 +253,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Botón de iniciar sesión
                   SizedBox(
                     width: double.infinity,
@@ -282,7 +266,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
-                                color: Colors.white, 
+                                color: Colors.white,
                                 strokeWidth: 3,
                               ),
                             )
@@ -290,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Enlace a registro
                   Center(
                     child: TextButton(
