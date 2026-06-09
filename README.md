@@ -1,10 +1,21 @@
-# 🎯 ConectaTIC v2.3.0
+# 🎯 ConectaTIC v2.0.0
 
 **Aplicación educativa para adultos mayores - Proyecto Gerencia de TI**
 
+**🚀 NUEVO: Ahora con MySQL (PlanetScale) + Vercel + Flutter Web**
+
 ---
 
-## 📱 Descargar APK
+## 🌐 Acceso Web
+
+**Aplicación Web:** `https://conectatic.vercel.app`  
+**API Backend:** `https://conectatic-api.vercel.app/api`
+
+⚠️ **En desarrollo** - Base de datos persistente con MySQL
+
+---
+
+## 📱 Descargar APK (Android)
 
 **Enlace directo:**
 - 📥 [Descargar ConectaTIC v2.3.0](https://drive.google.com/file/d/12HFg2awKNieGQVK7pRbfy0cIiGn_keyq/view?usp=sharing)
@@ -31,13 +42,13 @@ Correo: tumail@gmail.com
 Contraseña: MiPass123!
 ```
 
-**⚠️ Nota:** Los datos persisten ~24-48 horas en el servidor.
+✅ **Los datos persisten permanentemente** en PlanetScale MySQL
 
 ---
 
 ## 🖥️ Backend
 
-**URL Servidor:** `https://conectatic-production.up.railway.app/api`
+**URL Servidor:** `https://conectatic-api.vercel.app/api`
 
 **Endpoints:**
 - `POST /api/auth/register` - Crear cuenta
@@ -51,9 +62,9 @@ Contraseña: MiPass123!
 
 **Stack:**
 - Framework: Express.js (Node.js)
-- Base de datos: SQLite
+- Base de datos: MySQL (PlanetScale)
 - Autenticación: JWT (7 días)
-- Hosting: Railway
+- Hosting: Vercel (Serverless)
 
 ---
 
@@ -176,9 +187,9 @@ npm run test:security      # Seguridad (6+)
 
 ## ⚠️ Limitaciones Conocidas
 
-- Los datos persisten ~24-48 horas (SQLite en /tmp de Railway)
-- Cada reinicio del servidor limpia la BD
-- Para persistencia permanente, se requiere BD externa (MongoDB Atlas, Render PostgreSQL, etc.)
+- ~~Los datos persisten ~24-48 horas~~ ✅ **RESUELTO**: Ahora con MySQL persistente
+- ~~Base de datos SQLite~~ ✅ **RESUELTO**: Migrada a PlanetScale MySQL
+- ~~Backend en Railway~~ ✅ **RESUELTO**: Migrado a Vercel Serverless
 
 ---
 
@@ -186,8 +197,9 @@ npm run test:security      # Seguridad (6+)
 
 Para problemas o preguntas:
 1. Revisa la documentación en `docs/`
-2. Consulta los logs en Railway
-3. Verifica que el servidor esté en línea: `https://conectatic-production.up.railway.app/api`
+2. Consulta `DEPLOYMENT.md` para deployment
+3. Revisa logs en Vercel: `vercel logs [proyecto]`
+4. Verifica BD en PlanetScale dashboard
 
 ---
 
