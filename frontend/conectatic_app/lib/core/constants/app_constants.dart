@@ -1,5 +1,3 @@
-import 'dart:io';
-
 /// Valores constantes y configuración global de la aplicación.
 class AppConstants {
   AppConstants._();
