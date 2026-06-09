@@ -11,9 +11,10 @@ if (process.env.NODE_ENV !== 'production') {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// En producción, usar volumen persistente; en desarrollo, usar archivo local
+// Usar /tmp para persistencia temporal en Railway (24-48h)
+// En desarrollo, usar archivo local
 const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/data/conectatic.db'
+  ? '/tmp/conectatic.db'
   : path.join(__dirname, '../conectatic.db');
 
 let db;
@@ -27,6 +28,7 @@ export async function initDb() {
       } else {
         console.log('✅ Conexión a SQLite establecida correctamente');
         console.log(`   Base de datos: ${dbPath}`);
+        console.log(`   📝 Nota: Datos persisten ~24-48 horas en Railway`);
 
         // Habilitar foreign keys
         db.run('PRAGMA foreign_keys = ON', (err) => {
